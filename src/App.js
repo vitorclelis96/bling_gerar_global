@@ -1,5 +1,9 @@
 import React, {useState, useEffect} from 'react';
+import Container from 'react-bootstrap/Container';
 import RelatorioGlobal from './RelatorioGlobal/RelatorioGlobal';
+import FileSelectFrom from './FileSelectForm/FileSelectForm';
+import ClienteRotaSelector from './ClienteRotaSelector/ClienteRotaSelector';
+import RotaSelector from './RotaSelector/RotaSelector';
 const Papa = require('papaparse');
 
 
@@ -11,6 +15,7 @@ function App() {
   const [uniqueRoutes, setUniqueRoutes] = useState();
   const [selectedRoute, setSelectedRoute] = useState();
   const [relatorioGlobal, setRelatorioGlobal] = useState();
+  const [appStateLevel, setAppStateLevel] = useState(1);
 
   const selectedRouteHandler = (event) => {
     setSelectedRoute(event.target.value);
@@ -42,13 +47,14 @@ function App() {
     listaClientes.delete(undefined);
     listaClientes = Array.from(listaClientes);
     setListClientes(listaClientes);
+    setAppStateLevel(2);
   }, [fileData]);
 
 
-  // TODO
   const clienteRotaHandler = (event) => {
     event.preventDefault();
     setUniqueRoutes( [...new Set(Object.values(clienteRotaMap))] );
+    setAppStateLevel(3);
   }
 
   // Updates the clientRotaMap
@@ -123,6 +129,7 @@ function App() {
         return 0
       });
       setRelatorioGlobal(finalObjct);
+      setAppStateLevel(4);
     }
   }
   useEffect(() => {
@@ -131,56 +138,39 @@ function App() {
 
 
   let whatItShouldRender;
-  if (relatorioGlobal) {
-    whatItShouldRender = <RelatorioGlobal items={relatorioGlobal} />
-  } else {
-    whatItShouldRender = (
-      <React.Fragment>
-        <form onSubmit={loadCsvHandler} enctype="multipart/form-data">
-          <input type="file" name="file" onChange={fileHandler} />
-          <button type="submit">Submit</button>
-        </form>
-        {
-          listClients ?
-          <form onSubmit={clienteRotaHandler}>
-            {listClients.map((client) => {
-              return (
-                <div key={client}>
-                  {client.toString()} : 
-                  <input 
-                    type="text" 
-                    name={client.toString()}    // .replace(/\s/g, "")
-                    placeholder="Rota" 
-                    onChange={clientRotaMapHandler}
-                    required
-                  />
-                </div>
-              )
-            })}
-            <button type="submit">Submit</button>
-          </form>
-          : null
-        }
-        {
-          uniqueRoutes ?
-            <form onSubmit={generateGlobalHandler}>
-              <select value={selectedRoute} onChange={selectedRouteHandler}>
-                <option></option>
-                {uniqueRoutes.map((route) => {
-                  return (
-                    <option key={route} value={route}>{route.toString()}</option>
-                  )
-                })}
-              </select>
-              <button type="submit">Submit</button>
-            </form>
-          : null
-        }
-      </React.Fragment>
-    )
+  switch (appStateLevel) {
+    case 2:
+      whatItShouldRender = (
+        <ClienteRotaSelector 
+          onSubmit={clienteRotaHandler} 
+          listaClientes={listClients}
+          onChange={clientRotaMapHandler}
+        />
+      );
+      break;
+    case 3:
+      whatItShouldRender = (
+        <RotaSelector 
+          onSubmit={generateGlobalHandler}
+          onChange={selectedRouteHandler}
+          routes={uniqueRoutes}
+        />
+      );
+      break;
+    case 4:
+      whatItShouldRender = <RelatorioGlobal items={relatorioGlobal} />
+      break;
+    default:
+      whatItShouldRender = (
+        <FileSelectFrom onSubmit={loadCsvHandler} onChange={fileHandler} disabled={!file}/>
+      )
   }
 
-  return whatItShouldRender;
+  return (
+    <Container>
+      {whatItShouldRender}
+    </Container>
+  );
 }
 
 export default App;
